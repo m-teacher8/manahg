@@ -41,6 +41,11 @@
         .math-glow {
             filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
         }
+        /* إصلاح اتجاه الأرقام */
+        .ltr-numbers {
+            direction: ltr;
+            unicode-bidi: bidi-override;
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen py-8">
@@ -72,7 +77,7 @@
                         </div>
                     </div>
 
-                    <!-- 5202 المزخرفة -->
+                    <!-- 2025 المزخرفة - تم إصلاح الاتجاه -->
                     <div class="relative mt-4">
                         <!-- الزخرفة العلوية -->
                         <div class="flex gap-4 mb-3">
@@ -82,9 +87,9 @@
                             <div class="text-3xl text-purple-300 floating math-glow" style="animation-delay: 0.9s;">∞</div>
                         </div>
                         
-                        <!-- الرقم 2025 المزخرف -->
+                        <!-- الرقم 2025 المزخرف - تم إصلاح الاتجاه -->
                         <div class="relative">
-                            <div class="text-4xl md:text-5xl font-bold text-white tracking-wider" style="text-shadow: 3px 3px 6px rgba(0,0,0,0.4);">
+                            <div class="text-4xl md:text-5xl font-bold text-white tracking-wider ltr-numbers" style="text-shadow: 3px 3px 6px rgba(0,0,0,0.4);">
                                 <span class="text-yellow-300 floating" style="animation-delay: 0.1s;">2</span>
                                 <span class="text-blue-200 floating" style="animation-delay: 0.2s;">0</span>
                                 <span class="text-green-300 floating" style="animation-delay: 0.3s;">2</span>
@@ -154,6 +159,7 @@
                 <div>
                     <label class="block text-gray-700 text-base md:text-lg font-semibold mb-3">الصف (يمكن اختيار أكثر من صف)</label>
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 max-h-60 overflow-y-auto border-2 border-gray-300 rounded-xl p-3 md:p-4">
+                        <!-- جميع خيارات الصفوف -->
                         <label class="flex items-center p-2 border border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer transition-colors">
                             <input type="checkbox" name="grade" value="خامس 1" class="ml-2 w-4 h-4 text-blue-600">
                             <span class="text-gray-700 text-xs md:text-sm">خامس 1</span>
