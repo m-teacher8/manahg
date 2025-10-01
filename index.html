@@ -31,6 +31,12 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
         }
+        .submit-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-5px); }
@@ -45,6 +51,21 @@
         .ltr-numbers {
             direction: ltr;
             unicode-bidi: bidi-override;
+        }
+        /* مؤشر التحميل */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -332,7 +353,7 @@
 
                 <!-- زر الإرسال -->
                 <div class="text-center pt-4">
-                    <button type="submit" class="submit-btn text-white px-8 md:px-12 py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold">
+                    <button type="submit" id="submitBtn" class="submit-btn text-white px-8 md:px-12 py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold">
                         إرسال البيانات
                     </button>
                 </div>
@@ -347,6 +368,16 @@
                     <span class="font-semibold">تم إرسال البيانات بنجاح!</span>
                 </div>
             </div>
+
+            <!-- رسالة الخطأ -->
+            <div id="errorMessage" class="hidden mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-xl text-center">
+                <div class="flex items-center justify-center">
+                    <svg class="w-6 h-6 ml-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-semibold" id="errorText">حدث خطأ أثناء إرسال البيانات!</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -354,9 +385,53 @@
         // تعيين التاريخ الحالي
         document.getElementById('date').valueAsDate = new Date();
 
+        // دالة لإرسال البيانات مع إعادة المحاولة
+        async function sendData(formData, retries = 3) {
+            const params = new URLSearchParams();
+            params.append('teacherName', formData.teacherName);
+            params.append('grade', formData.grade.join(', '));
+            params.append('lesson', formData.lesson);
+            params.append('assessments', formData.assessments.join(', '));
+            params.append('date', formData.date);
+
+            const url = 'https://script.google.com/macros/s/AKfycbwJdIE9Lkc_hsTqrIoN-t9y7-jH0nhWJcSqI_ljJX9U1XlIzw3FNctd402X-STfhsvJQw/exec?' + params.toString();
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'no-cors' // مهم للتغلب على مشاكل CORS
+                });
+
+                // مع no-cors لا يمكننا قراءة الاستجابة، لكن نعتبر أن الإرسال ناجح
+                console.log('تم إرسال البيانات بنجاح:', formData);
+                return { success: true };
+            } catch (error) {
+                console.error('خطأ في الإرسال:', error);
+                
+                if (retries > 0) {
+                    console.log(`إعادة المحاولة... ${retries} محاولات متبقية`);
+                    // انتظر ثانية ثم أعد المحاولة
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return sendData(formData, retries - 1);
+                } else {
+                    return { success: false, error: error.message };
+                }
+            }
+        }
+
         // معالجة إرسال النموذج
-        document.getElementById('curriculumForm').addEventListener('submit', function(e) {
+        document.getElementById('curriculumForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            // تعطيل زر الإرسال وإظهار مؤشر التحميل
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = 'جاري الإرسال... <div class="loader"></div>';
+            submitBtn.disabled = true;
+            
+            // إخفاء الرسائل السابقة
+            document.getElementById('successMessage').classList.add('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
             
             // جمع البيانات
             const formData = {
@@ -367,43 +442,27 @@
                 date: document.getElementById('date').value
             };
 
-            // إرسال البيانات باستخدام GET مع المعاملات
-            const params = new URLSearchParams();
-            params.append('teacherName', formData.teacherName);
-            params.append('grade', formData.grade.join(', '));
-            params.append('lesson', formData.lesson);
-            params.append('assessments', formData.assessments.join(', '));
-            params.append('date', formData.date);
-
-            const url = 'https://script.google.com/macros/s/AKfycbwJdIE9Lkc_hsTqrIoN-t9y7-jH0nhWJcSqI_ljJX9U1XlIzw3FNctd402X-STfhsvJQw/exec?' + params.toString();
-
-            // استخدام iframe مخفي للإرسال
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = url;
-            document.body.appendChild(iframe);
-
-            console.log('البيانات المرسلة:', formData);
-            console.log('الرابط:', url);
+            // إرسال البيانات
+            const result = await sendData(formData);
             
-            // إظهار رسالة النجاح
-            document.getElementById('successMessage').classList.remove('hidden');
+            if (result.success) {
+                // إظهار رسالة النجاح
+                document.getElementById('successMessage').classList.remove('hidden');
+                
+                // إعادة تعيين النموذج بعد تأخير قصير
+                setTimeout(() => {
+                    this.reset();
+                    document.getElementById('date').valueAsDate = new Date();
+                }, 1000);
+            } else {
+                // إظهار رسالة الخطأ
+                document.getElementById('errorText').textContent = 'حدث خطأ أثناء إرسال البيانات. يرجى المحاولة مرة أخرى.';
+                document.getElementById('errorMessage').classList.remove('hidden');
+            }
             
-            // إزالة الـ iframe بعد ثانيتين
-            setTimeout(() => {
-                document.body.removeChild(iframe);
-            }, 2000);
-            
-            // إخفاء الرسالة بعد 3 ثوان
-            setTimeout(() => {
-                document.getElementById('successMessage').classList.add('hidden');
-            }, 3000);
-
-            // إعادة تعيين النموذج
-            setTimeout(() => {
-                this.reset();
-                document.getElementById('date').valueAsDate = new Date();
-            }, 1000);
+            // إعادة تفعيل زر الإرسال
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         });
 
         // تأثيرات تفاعلية للنموذج
